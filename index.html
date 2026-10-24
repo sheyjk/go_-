@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Заметки на Go</title>
+
+  <!-- стили -->
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    input, textarea, button { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 8px; font-size: 16px; }
+    textarea { resize: vertical; min-height: 80px; }
+    button { cursor: pointer; background: #007bff; color: #fff; border: none; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    .note { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 12px; position: relative; }
+    .note h3 { margin: 0 0 4px; }
+    .note small { color: #888; }
+    .note .del { position: absolute; top: 8px; right: 8px; width: auto; padding: 4px 8px; background: #dc3545; font-size: 12px; }
+    .note .del:hover { background: #a71d2a; }
+  </style>
+  
+</head>
+
+<!-- разметка -->
+<body>
+  <h1>Заметки на Go</h1>
+  <input id="title" placeholder="Заголовок" />
+  <textarea id="body" placeholder="Текст заметки"></textarea>
+  <button onclick="addNote()">Добавить</button>
+  <div id="list"></div>
+
+<!-- скрипт -->
+  <script>
+    async function load() {
+      const res = await fetch('/api/notes');
+      const notes = await res.json();
+      const list = document.getElementById('list');
+      list.innerHTML = notes.length === 0 ? '<p>Пока нет заметок.</p>' : '';
+      notes.forEach(n => {
+        const div = document.createElement('div');
+        div.className = 'note';
+        div.innerHTML = '<h3>' + escapeHtml(n.title) + '</h3>' +
+          '<small>' + new Date(n.created_at).toLocaleString() + '</small>' +
+          '<p>' + escapeHtml(n.body) + '</p>' +
+          '<button class="del" onclick="delNote(' + n.id + ')">Удалить</button>';
+        list.appendChild(div);
+      });
+    }
+
+    async function addNote() {
+      const title = document.getElementById('title').value.trim();
+      const body = document.getElementById('body').value.trim();
+      if (!title) return alert('Введите заголовок');
+      await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, body })
+      });
+      document.getElementById('title').value = '';
+      document.getElementById('body').value = '';
+      load();
+    }
+
+    async function delNote(id) {
+      await fetch('/api/notes/' + id, { method: 'DELETE' });
+      load();
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    load();
+  </script>
+</body>
+</html>
